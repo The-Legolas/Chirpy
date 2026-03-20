@@ -1,22 +1,25 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
+	"sync/atomic"
 )
+
+type apiConfig struct {
+	fileserverHits atomic.Int32
+}
 
 func main() {
 	const filepathRoot = "."
 	const port = "8080"
+	apiCfg := &apiConfig{}
 
 	mux := http.NewServeMux()
-	mux.Handle("/app/", http.StripPrefix("/app", http.FileServer(http.Dir("."))))
-	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
-	})
+	mux.Handle("/app/", apiCfg.middlewareMetricsInc(handlerStripPrefix("/app", filepathRoot)))
+	mux.HandleFunc("/healthz", handlerReadiness)
+	mux.HandleFunc("/metrics", apiCfg.handlerMetrics)
+	mux.HandleFunc("/reset", apiCfg.handlerResetMetrics)
 
 	srv := &http.Server{
 		Addr:    ":" + port,
@@ -24,10 +27,9 @@ func main() {
 	}
 
 	log.Printf("Serving files from %s on port: %s\n", filepathRoot, port)
-	err := srv.ListenAndServe()
-	if err != nil {
-		fmt.Printf("Error listening to server: %v\n", err)
-		return
-	}
+	log.Fatal(srv.ListenAndServe())
+}
 
+func handlerStripPrefix(prefix string, filepathRoot string) http.Handler {
+	return http.StripPrefix(prefix, http.FileServer(http.Dir(filepathRoot)))
 }
