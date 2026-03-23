@@ -16,10 +16,14 @@ func main() {
 	apiCfg := &apiConfig{}
 
 	mux := http.NewServeMux()
-	mux.Handle("/app/", apiCfg.middlewareMetricsInc(handlerStripPrefix("/app", filepathRoot)))
-	mux.HandleFunc("/healthz", handlerReadiness)
-	mux.HandleFunc("/metrics", apiCfg.handlerMetrics)
-	mux.HandleFunc("/reset", apiCfg.handlerResetMetrics)
+
+	fsHandler := apiCfg.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir(filepathRoot))))
+	mux.Handle("/app/", fsHandler)
+	mux.HandleFunc("GET /api/healthz", handlerReadiness)
+	mux.HandleFunc("POST /api/validate_chirp", handlerChirpsValidate)
+
+	mux.HandleFunc("GET /admin/metrics", apiCfg.handlerMetrics)
+	mux.HandleFunc("POST /admin/reset", apiCfg.handlerResetMetrics)
 
 	srv := &http.Server{
 		Addr:    ":" + port,
@@ -30,6 +34,8 @@ func main() {
 	log.Fatal(srv.ListenAndServe())
 }
 
+/*
 func handlerStripPrefix(prefix string, filepathRoot string) http.Handler {
 	return http.StripPrefix(prefix, http.FileServer(http.Dir(filepathRoot)))
 }
+*/
