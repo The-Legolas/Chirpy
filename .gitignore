@@ -1,3 +1,4 @@
 out
 *.http
 chirpy_backup.sql
+.env
