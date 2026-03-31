@@ -13,39 +13,37 @@ func (cfg *apiConfig) handlerRefresh(w http.ResponseWriter, r *http.Request) {
 
 	bearerToken, err := auth.GetBearerToken(r.Header)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Error accesing bearer token", err)
+		respondWithError(w, http.StatusBadRequest, "Error finding bearer token", err)
 		return
 	}
 
 	dbUser, err := cfg.db.GetUserFromRefreshToken(r.Context(), bearerToken)
 	if err != nil {
-		respondWithError(w, http.StatusUnauthorized, "Error accesing bearer token", err)
+		respondWithError(w, http.StatusUnauthorized, "Couldn't get user for refresh token", err)
 		return
 	}
 
-	expirationTime := time.Hour
-
-	token, err := auth.MakeJWT(dbUser.ID, cfg.jwtSecret, expirationTime)
+	accessToken, err := auth.MakeJWT(dbUser.ID, cfg.jwtSecret, time.Hour)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Erorr generating access JWT", err)
+		respondWithError(w, http.StatusUnauthorized, "Couldn't validate token", err)
 		return
 	}
 
 	respondWithJSON(w, http.StatusOK, response{
-		Token: token,
+		Token: accessToken,
 	})
 }
 
 func (cfg *apiConfig) handlerRevoke(w http.ResponseWriter, r *http.Request) {
 	bearerToken, err := auth.GetBearerToken(r.Header)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Error accesing bearer token", err)
+		respondWithError(w, http.StatusBadRequest, "Error finding bearer token", err)
 		return
 	}
 
 	_, err = cfg.db.RevokeRefreshToken(r.Context(), bearerToken)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Erorr getting refresh token", err)
+		respondWithError(w, http.StatusInternalServerError, "Couldn't revoke session", err)
 		return
 	}
 

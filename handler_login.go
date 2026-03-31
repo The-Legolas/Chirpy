@@ -3,7 +3,6 @@ package main
 import (
 	"chirpy/internal/auth"
 	"chirpy/internal/database"
-	"database/sql"
 	"encoding/json"
 	"net/http"
 	"time"
@@ -41,11 +40,9 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	expirationTime := time.Hour
-
-	token, err := auth.MakeJWT(user.ID, cfg.jwtSecret, expirationTime)
+	accessToken, err := auth.MakeJWT(user.ID, cfg.jwtSecret, time.Hour)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Erorr generating access JWT", err)
+		respondWithError(w, http.StatusInternalServerError, "Error generating access JWT", err)
 		return
 	}
 
@@ -55,12 +52,11 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 		Token:     newRefreshToken,
 		UserID:    user.ID,
 		ExpiresAt: time.Now().Add(time.Hour * 24 * 60),
-		RevokedAt: sql.NullTime{},
 	}
 
-	refreshToken, err := cfg.db.CreateRefreshToken(r.Context(), refreshTokenArgs)
+	_, err = cfg.db.CreateRefreshToken(r.Context(), refreshTokenArgs)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Erorr generating refresh token", err)
+		respondWithError(w, http.StatusInternalServerError, "Couldn't save refresh token", err)
 		return
 	}
 
@@ -71,7 +67,7 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 			UpdatedAt: user.UpdatedAt,
 			Email:     user.Email,
 		},
-		Token:        token,
-		RefreshToken: refreshToken.Token,
+		Token:        accessToken,
+		RefreshToken: newRefreshToken,
 	})
 }

@@ -35,7 +35,7 @@ func main() {
 		log.Fatal("PLATFORM must be set")
 	}
 
-	jwtSecret := os.Getenv("JWS_SECRET")
+	jwtSecret := os.Getenv("JWT_SECRET")
 	if jwtSecret == "" {
 		log.Fatal("SECRET must be set")
 	}
@@ -67,6 +67,7 @@ func main() {
 	mux.HandleFunc("POST /api/revoke", apiCfg.handlerRevoke)
 
 	mux.HandleFunc("POST /api/users", apiCfg.handlerCreateUser)
+	mux.HandleFunc("PUT /api/users", apiCfg.handlerUsersUpdate)
 
 	mux.HandleFunc("GET /api/chirps", apiCfg.handlerChirpsRetrieve)
 	mux.HandleFunc("POST /api/chirps", apiCfg.handlerChirpsCreate)
