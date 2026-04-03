@@ -22,3 +22,7 @@ WHERE id = $1;
 DELETE FROM chirps
 WHERE id = $1 AND user_id = $2
 RETURNING *;
+
+-- name: GetChirpViaAuthor :many
+SELECT * FROM chirps
+WHERE user_id = $1;
