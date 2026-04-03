@@ -1,6 +1,7 @@
 package main
 
 import (
+	"chirpy/internal/auth"
 	"encoding/json"
 	"net/http"
 
@@ -15,28 +16,15 @@ type PolkaWebhooks struct {
 }
 
 func (cfg *apiConfig) handlerWebhooks(w http.ResponseWriter, r *http.Request) {
-	/*
-		bearerToken, err := auth.GetBearerToken(r.Header)
-		if err != nil {
-			respondWithError(w, http.StatusUnauthorized, "Error accesing bearer token", err)
-			return
-		}
-
-		userID, err := auth.ValidateJWT(bearerToken, cfg.jwtSecret)
-		if err != nil {
-			respondWithError(w, http.StatusUnauthorized, "Couldn't validate JWT", err)
-			return
-		}
-
-		if params.Data.UserID != userID.String() {
-			respondWithError(w, http.StatusForbidden, "Error incorrect ID", err)
-			return
-		}
-	*/
+	_, err := auth.GetAPIKey(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Couldn't find polka key", err)
+		return
+	}
 
 	decoder := json.NewDecoder(r.Body)
 	params := PolkaWebhooks{}
-	err := decoder.Decode(&params)
+	err = decoder.Decode(&params)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "Couldn't decode parameters", err)
 		return

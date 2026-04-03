@@ -105,3 +105,17 @@ func MakeRefreshToken() string {
 
 	return encodedStr
 }
+
+func GetAPIKey(headers http.Header) (string, error) {
+	authHeader := headers.Get("Authorization")
+	if authHeader == "" {
+		return "", ErrNoAuthHeaderIncluded
+	}
+
+	token, ok := strings.CutPrefix(authHeader, "ApiKey ")
+	if !ok {
+		return "", fmt.Errorf("Error header doesn't exits")
+	}
+
+	return token, nil
+}
