@@ -78,10 +78,10 @@ func (cfg *apiConfig) handlerChirpsRetrieve(w http.ResponseWriter, r *http.Reque
 		})
 	}
 
-	sort_string := r.URL.Query().Get("sort")
+	sortDirection := r.URL.Query().Get("sort")
 
 	sort.Slice(jsonChirp, func(i, j int) bool {
-		if sort_string == "desc" {
+		if sortDirection == "desc" {
 			return jsonChirp[i].CreatedAt.After(jsonChirp[j].CreatedAt)
 		}
 		return jsonChirp[i].CreatedAt.Before(jsonChirp[j].CreatedAt)
