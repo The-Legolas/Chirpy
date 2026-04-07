@@ -90,12 +90,12 @@ func GetBearerToken(headers http.Header) (string, error) {
 		return "", ErrNoAuthHeaderIncluded
 	}
 
-	token, ok := strings.CutPrefix(authHeader, "Bearer ")
-	if !ok {
-		return "", fmt.Errorf("Error header doesn't exits")
+	token := strings.Split(authHeader, " ")
+	if len(token) < 2 || token[0] != "Bearer" {
+		return "", errors.New("malformed authorization header")
 	}
 
-	return token, nil
+	return token[1], nil
 }
 
 func MakeRefreshToken() string {
@@ -112,10 +112,10 @@ func GetAPIKey(headers http.Header) (string, error) {
 		return "", ErrNoAuthHeaderIncluded
 	}
 
-	token, ok := strings.CutPrefix(authHeader, "ApiKey ")
-	if !ok {
-		return "", fmt.Errorf("Error header doesn't exits")
+	token := strings.Split(authHeader, " ")
+	if len(token) < 2 || token[0] != "ApiKey" {
+		return "", errors.New("malformed authorization header")
 	}
 
-	return token, nil
+	return token[1], nil
 }

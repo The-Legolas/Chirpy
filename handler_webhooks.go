@@ -16,9 +16,14 @@ type PolkaWebhooks struct {
 }
 
 func (cfg *apiConfig) handlerWebhooks(w http.ResponseWriter, r *http.Request) {
-	_, err := auth.GetAPIKey(r.Header)
+	apiKey, err := auth.GetAPIKey(r.Header)
 	if err != nil {
-		respondWithError(w, http.StatusUnauthorized, "Couldn't find polka key", err)
+		respondWithError(w, http.StatusUnauthorized, "Couldn't find API key", err)
+		return
+	}
+
+	if apiKey != cfg.polkaKey {
+		respondWithError(w, http.StatusUnauthorized, "API key is invalid", err)
 		return
 	}
 

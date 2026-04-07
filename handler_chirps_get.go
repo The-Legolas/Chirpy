@@ -3,6 +3,7 @@ package main
 import (
 	"chirpy/internal/database"
 	"net/http"
+	"sort"
 
 	"github.com/google/uuid"
 )
@@ -34,35 +35,40 @@ func (cfg *apiConfig) handlerChirpsGet(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusOK, jsonChirp)
 }
 
+func authorIDFromRequest(r *http.Request) (uuid.UUID, error) {
+	authorIDString := r.URL.Query().Get("author_id")
+	if authorIDString == "" {
+		return uuid.Nil, nil
+	}
+	authorID, err := uuid.Parse(authorIDString)
+	if err != nil {
+		return uuid.Nil, err
+	}
+	return authorID, nil
+}
+
 func (cfg *apiConfig) handlerChirpsRetrieve(w http.ResponseWriter, r *http.Request) {
-	var DBChirp []database.Chirp
+	var dbChirp []database.Chirp
 	var err error
 
-	author_id_string := r.URL.Query().Get("author_id")
-
-	if author_id_string != "" {
-
-		author_uuid, err := uuid.Parse(author_id_string)
-		if err != nil {
-			respondWithError(w, http.StatusBadRequest, "Error converting to uuid", err)
-			return
-		}
-
-		DBChirp, err = cfg.db.GetChirpViaAuthor(r.Context(), author_uuid)
-		if err != nil {
-			respondWithError(w, http.StatusInternalServerError, "Couldn't fetch chirps", err)
-			return
-		}
-	} else {
-		DBChirp, err = cfg.db.GetAllChirps(r.Context())
-		if err != nil {
-			respondWithError(w, http.StatusInternalServerError, "Couldn't fetch chirps", err)
-			return
-		}
+	authorID, err := authorIDFromRequest(r)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid author ID", err)
+		return
 	}
 
-	jsonChirp := make([]Chirp, 0, len(DBChirp))
-	for _, chirp := range DBChirp {
+	if authorID != uuid.Nil {
+		dbChirp, err = cfg.db.GetChirpViaAuthor(r.Context(), authorID)
+	} else {
+		dbChirp, err = cfg.db.GetAllChirps(r.Context())
+	}
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Couldn't fetch chirps", err)
+		return
+	}
+
+	jsonChirp := make([]Chirp, 0, len(dbChirp))
+	for _, chirp := range dbChirp {
 		jsonChirp = append(jsonChirp, Chirp{
 			ID:        chirp.ID,
 			CreatedAt: chirp.CreatedAt,
@@ -71,6 +77,15 @@ func (cfg *apiConfig) handlerChirpsRetrieve(w http.ResponseWriter, r *http.Reque
 			UserID:    chirp.UserID,
 		})
 	}
+
+	sort_string := r.URL.Query().Get("sort")
+
+	sort.Slice(jsonChirp, func(i, j int) bool {
+		if sort_string == "desc" {
+			return jsonChirp[i].CreatedAt.After(jsonChirp[j].CreatedAt)
+		}
+		return jsonChirp[i].CreatedAt.Before(jsonChirp[j].CreatedAt)
+	})
 
 	respondWithJSON(w, http.StatusOK, jsonChirp)
 }
